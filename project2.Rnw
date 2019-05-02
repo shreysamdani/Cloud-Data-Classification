@@ -463,7 +463,7 @@ We can see from the log loss table above that logisitc regression performs has a
 of your choice by showing some diagnostic plots or information related to
 convergence or parameter estimation.\\\\
 Based on the ROC plots and accuracies, most of the models had similar performance, with QDA doing marginally better (KSVM is not considered because the only metric we have to compare it is the test accuracy). QDA also has a high accuracy rate with both splitting methods. Therefore, we choose to diagnose the QDA model.
-<<fig.width=6, fig.asp=0.4>>=
+<<fig.width=7, fig.asp=0.4>>=
 num_outputs = 20
 qda.accuracies = c()
 n = nrow(data)
