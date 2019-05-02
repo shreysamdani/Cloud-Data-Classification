@@ -97,11 +97,12 @@ CVgeneric = function(classifier, data, K, loss, hyperparams, formula, splitMetho
     folds = split.2(data)
   }
   if (classifier == 'kernelSVM') {
+    
+    data = data[,]
+    data$label = factor(data$label)
     cores=detectCores()
     cl <- makeCluster(cores[1]-1) 
     registerDoParallel(cl)
-    data = data[,]
-    data$label = factor(data$label)
   }
   classifierModel = eval(as.symbol(classifier))
   error = c()
@@ -112,7 +113,7 @@ CVgeneric = function(classifier, data, K, loss, hyperparams, formula, splitMetho
     model = classifierModel(trainData,hyperparams, formula)
 
     if (classifier == 'dtree') {
-      p = predict(model, testData, type = "prob")
+      p = predict(model, testData, type = "prob")[,2]
     } else if (classifier == 'kernelSVM') {
       predicted = predict(model, testData)
     } else {

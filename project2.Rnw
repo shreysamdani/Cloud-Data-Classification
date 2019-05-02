@@ -454,7 +454,7 @@ We look at the log loss for each of the models (KSVM is not included since the m
 <<>>=
 model.logloss[1:4,]
 @
-We can see from the log loss table above that logisitc regression performs has a significantly lower loss as opposed to the other models. The log loss penalizes more for confident misclassificatoins. This means that the logistic regression is not as confident in misclassifications as the other models. This factor puts our top two models at Logistic Regression (because of the log loss) and Kernel SVM (high accuracy).
+We can see from the log loss table above that logisitc regression performs has a significantly lower loss as opposed to QDA and Decision trees. The log loss penalizes more for confident misclassificatoins. This means that the logistic regression is not as confident in misclassifications as the other models. This is, however, a trade off with the low CV accuracy obtained using splitting method 2.
 \end{enumerate}
 
 \section{Diagnostics (50 pts)}
@@ -462,57 +462,70 @@ We can see from the log loss table above that logisitc regression performs has a
 \item Do an in-depth analysis of a good classification model
 of your choice by showing some diagnostic plots or information related to
 convergence or parameter estimation.\\\\
-Based on the ROC plots and accuracies, most of the models had similar performance, with QDA doing marginally better (KSVM is not considered because the only metric we have to compare it is the test accuracy). However, looking at the log loss, we can see that the logistic regression outperforms the other models. Therefore, we will diagnose the logistic regression model here. \\
-\begin{minipage}[t]{0.5\textwidth}
-% \vspace{-1cm}
-<<fig.width=6, fig.asp=0.6>>=
+Based on the ROC plots and accuracies, most of the models had similar performance, with QDA doing marginally better (KSVM is not considered because the only metric we have to compare it is the test accuracy). QDA also has a high accuracy rate with both splitting methods. Therefore, we choose to diagnose the QDA model.
+<<fig.width=6, fig.asp=0.4>>=
 num_outputs = 20
-log.accuracies = c()
+qda.accuracies = c()
 n = nrow(data)
 cutoffs =round(seq(1,n,length.out=num_outputs+1))
-coefs = data.frame(matrix(nrow = num_outputs,ncol = 5))
-colnames(coefs) = names(coef(model.log))
-colnames(coefs)[colnames(coefs)=="(Intercept)"] <- "Intercept"
+coefs = data.frame(matrix(nrow = num_outputs,ncol = 6))
+colnames(coefs) = c("mean_0","cov_0","mean_1","cov_1","Fnorm_0","Fnorm_1")
+# colnames(coefs)[colnames(coefs)=="(Intercept)"] <- "Intercept"
 for (i in 2:(num_outputs+1)) {
-  model = glm(label~NDAI+CORR+SD+AN,family = 'binomial', data = data[1:cutoffs[i],])
-  coefs[i-1,] = coef(model)
-  prediction = round(predict(model, newdata=test.data,type='response'))
-  log.accuracies = c(log.accuracies, mean(prediction==trueLabels))
+  partialData = data[1:cutoffs[i],]
+  class0 = partialData[partialData$label == 0,2:ncol(partialData)]
+  class1 = partialData[partialData$label == 1,2:ncol(partialData)]
+  mean0 = matrix(colMeans(class0), length(colMeans(class0)), 1)
+  cov0 = cov(class0)
+  mean1 = matrix(colMeans(class1), length(colMeans(class1)), 1)
+  cov1 = cov(class1)
+  
+  model = qda(label~., data = partialData)
+  fnorm1 = norm(model$scaling[,,1],type = 'f')
+  fnorm2 = norm(model$scaling[,,2],type = 'f')
+  coefs[i-1,] = c(mean0,cov0,mean1,cov1,fnorm1,fnorm2)
+  prediction = predict(model, test.data,type='response')$class
+  qda.accuracies = c(qda.accuracies, mean(prediction==trueLabels))
 }
 
-graph = ggplot(coefs, aes(x=1:num_outputs/num_outputs)) + labs(title = "Parameter convergence of Logistic Regression", x="% of training data", y="parameter value")
-i = 1
-for (param in names(coefs)) {
-  graph = graph + geom_line(aes_string(y=param, color = shQuote(param)))
-  i = i+1
+graph1 = ggplot(coefs, aes(x=1:num_outputs/num_outputs)) + labs( x="% of training data", y="parameter value") 
+graph2 = ggplot(coefs, aes(x=1:num_outputs/num_outputs)) + labs( x="% of training data", y="parameter value")
+
+for (param in names(coefs)[1:3]) {
+  graph1 = graph1 + geom_line(aes_string(y=param, color = shQuote(param)))
 }
-graph
+
+for (param in names(coefs)[4:6]) {
+  graph2 = graph2 + geom_line(aes_string(y=param, color = shQuote(param)))
+}
+
+library(ggpubr)
+g = ggarrange(graph1,graph2, nrow = 1,ncol=2, common.legend = T, legend = "bottom")
+annotate_figure(g, top="Parameter convergence of QDA")
 @
-\end{minipage}
-\begin{minipage}[t]{0.5\textwidth}
-\vspace{1cm}
-Looking at the plot of parameter value vs \% of training data, we can see that each of the parameters converge to a value at around 70\% of training data. This means that the data is consistent. It also means that the variables are not multicolinear, the data is not sparse, and the data is not perfectly linearly separable. 
-\end{minipage}\\\\
+
+Looking at the plot of parameter value vs \% of training data, we can see that each of the parameters converge to a value at around 80\% of training data.   
+
 \begin{minipage}[t]{0.5\textwidth}
 
 <<fig.width=6,fig.asp=0.5>>=
-ggplot(data.frame(), aes(x=1:num_outputs/num_outputs,y=log.accuracies)) + geom_line()+ labs(title = "Test Accuracy of Logistic Regression", x="% of training data", y="Test Accuracy")
+ggplot(data.frame(), aes(x=1:num_outputs/num_outputs,y=qda.accuracies)) + geom_line()+ labs(title = "Test Accuracy of QDA", x="% of training data", y="Test Accuracy")
 @
 \end{minipage}
 \begin{minipage}[t]{0.5\textwidth}
 \vspace{1cm}
-Looking at this plot, we can see that the model might actually be overfitting once it passes 40\% of the data. 
+Looking at this plot, we can see that the model might actually be overfitting once it passes 60\% of the data. 
 \end{minipage}\\\\
-\begin{minipage}[t]{0.5\textwidth}
-
-<<fig.width=6,fig.asp=0.5>>=
-ggplot(data.frame(),aes(x=residuals(model.log), y=..density..))+geom_histogram()
-@
-\end{minipage}
-\begin{minipage}[t]{0.5\textwidth}
-\vspace{1cm}
-We also look at the deviance residuals for this logistic regression model. There are not many data points that have a significant residual, which is indicative of a good fit.
-\end{minipage}\\
+% \begin{minipage}[t]{0.5\textwidth}
+% 
+% <<fig.width=6,fig.asp=0.5>>=
+% # ggplot(data.frame(),aes(x=residuals(model.log), y=..density..))+geom_histogram()
+% @
+% \end{minipage}
+% \begin{minipage}[t]{0.5\textwidth}
+% \vspace{1cm}
+% We also look at the deviance residuals for this logistic regression model. There are not many data points that have a significant residual, which is indicative of a good fit.
+% \end{minipage}\\
 <<>>=
 # summary(model.log)$coefficients
 @
@@ -532,9 +545,9 @@ predicted = p == (data.labeled$label+1)/2
 ggplot(data.labeled, aes(x=x,y=y, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for Logistic Regression (x,y)")
 ggplot(data.labeled, aes(x=NDAI,y=CORR, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for Logistic Regression (NDAI,CORR)")
 @
-From the accuracy graphs based on location, we can see that there are definitely clusters in both KSVM and QDA that are entirely misclassified (moreso in QDA). Looking at the specific clusters, it appears that some of the misclassifications look to be more underfitting in certain areas (left side of data2 for QDA) and overfitting in others. \\
+From the accuracy graphs based on location, we can see that there are definitely clusters in both KSVM and logistic regression that are entirely misclassified (moreso in logistic regression). Looking at the specific clusters, it appears that some of the misclassifications look to be more underfitting in certain areas (left side of data2 for QDA) and overfitting in others. \\
 
-From the accuracy graphs based on the NDAI/CORR, we can see that for the KSVM model, most of the misclassifications are are values of NDAI over 1. For QDA, The misclassifications are much more visible and significant for these high NDAI values. We also see that QDA has more trouble with classification with lower values of CORR. These errors are likely due again to overfitting during training.
+From the accuracy graphs based on the NDAI/CORR, we can see that for the KSVM model, most of the misclassifications are are values of NDAI over 1. For logistic regression, we can also see misclassifications in higher NDAI values. The misclassifications for CORR seem to be relatively well spread our over the range of CORR.
 \item Based on parts 4(a) and 4(b), can you think of a better classifier?
 How well do you think your model will work on future data without expert 
 labels?\\\\
