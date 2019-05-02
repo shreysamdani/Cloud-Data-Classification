@@ -500,7 +500,7 @@ for (param in names(coefs)[4:6]) {
 }
 
 library(ggpubr)
-g = ggarrange(graph1,graph2, nrow = 1,ncol=2, common.legend = T, legend = "bottom")
+g = ggarrange(graph1,graph2, nrow = 1,ncol=2, legend = "bottom")
 annotate_figure(g, top="Parameter convergence of QDA")
 @
 
