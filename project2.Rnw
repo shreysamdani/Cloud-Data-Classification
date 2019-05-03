@@ -427,7 +427,7 @@ print(paste("CORRELATION OF LOGIT OF OUTCOME/FEATURES:",sqrt(summary(lm(logit~ND
 Another assumption is that features should not be highly correlated with each other, which is satisfied since only AN was used from the radiance readings. We also satisfy the assumption that the output is a binary classification label.
 \\\\
 
-Kernel SVM: This model performed the best out of the models tested here. The kernel used is the RBF kernel, with arbitrary parameters $C=1,\sigma=1$. Because of the computational complexity of this model, it was infeasible to tune the hyperparameters during the scope of this project.\\
+Kernel SVM: This model performed the best out of the models tested here. The kernel used is the RBF kernel, with arbitrary parameters $C=1,\sigma=1$. The value of C is set by default and the value of sigma was chosen using the sigest function (part of the kernlab package). Because of the computational complexity of this model, it was infeasible to tune the hyperparameters during the scope of this project.\\
 Assumptions: No assumptions, as the kernel svm does not make any assumptions about the input data.
 \\\\
 We can see from the accuracies that using method 1, each of the models provides a similar accuracy of around 90\%. Method 2 has a little lower accuracies, likely due to the fact that there is less data within each of the folds as opposed to the first method. We also see that NDAI, CORR, and AN seem to be features that are important. The AN feature might be seen as important due to possible overfitting of the data.
@@ -463,7 +463,7 @@ We can see from the log loss table above that logisitc regression performs has a
 of your choice by showing some diagnostic plots or information related to
 convergence or parameter estimation.\\\\
 Based on the ROC plots and accuracies, most of the models had similar performance, with QDA doing marginally better (KSVM is not considered because the only metric we have to compare it is the test accuracy). QDA also has a high accuracy rate with both splitting methods. Therefore, we choose to diagnose the QDA model.
-<<fig.width=8, fig.asp=0.4, out.width="87.5%">>=
+<<fig.width=9, fig.asp=0.4, out.width="78%">>=
 num_outputs = 20
 qda.accuracies = c()
 n = nrow(data)
@@ -547,26 +547,16 @@ labels?\\\\
 Since overfitting is related to having a high variance, we can use a model that uses ensemble methods to reduce the variance. An example of such a model is a random forest. Since a random forest is an ensemble method of a decision tree, it will have the same expectation but a much lower variance (depending on the number of trees used). The results are shown below.
 <<fig.asp=9/24,fig.width=9>>=
 library(randomForest)
-data.2$label= factor(data.2$label)
-
 
 model.randForest = randomForest(formula=formula,data=data)
 model.randForest.pred = predict(model.randForest, test.data)
 predicted = model.randForest.pred == trueLabels
-print(paste("TEST ACCURACY (Splitting Method 1):",mean(predicted)))
-
-model.randForest.2 = randomForest(formula=formula,data=data.2[,-c(1,2,12)])
-model.randForest.pred.2 = predict(model.randForest, test.data.2)
-predicted = model.randForest.pred.2 == factor((test.data.2$label+1)/2)
-print(paste("TEST ACCURACY (Splitting Method 2):",mean(predicted)))
+print(paste("TEST ACCURACY:",mean(predicted)))
 
 p = predict(model.randForest, data.labeled)
 predicted = (p == factor((data.labeled$label+1)/2))
-ggplot(data.labeled, aes(x=x,y=y, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for Random Forest (Method 1) (x,y)")
+ggplot(data.labeled, aes(x=x,y=y, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for Random Forest (x,y)")
 
-p = predict(model.randForest.2, data.labeled)
-predicted = (p == factor((data.labeled$label+1)/2))
-ggplot(data.labeled, aes(x=x,y=y, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for Random Forest (Method 1) (x,y)")
 @
 The results suffer less from overfitting than the models specified in parts (a) and (b).\\
 This model should work well better with future data without expert labels since it will be less likely to overfit the data and more likely to balance the bias and variance. We can also see that both the test accuracies are relatively high as compared to the other methods. 
@@ -578,6 +568,26 @@ Since method 2 gives us less training points, the observed testing points will l
 We have tried 5 models for this project: QDA, LDA, Logistic Regression, Decision Tree and Kernel SVM. All of the 5 models did quite well on the CV accuracy using splitting method 1, with Kernel SVM as the highest; QDA stands out and reported the highest CV accuracy when splitting method 2 was used. Since splitting method 2 model a more realistic world situation as there is completely no dependence in pixels in separate images, we believe this might indicate that QDA is a good model on future data. Moreover, the ROC of QDA reports the best AUC and suggests a cutoff of 0; the assumptions of QDA is also met as we discussed above. The model converges at 80\% of the training data. We believe that QDA is the best model of the five. Since QDA might have the problem of overfitting, we also tried to use a more advanced model: Random Forest. We hope to use this model to lower to variance of the prediction. It turned out this model did exceptionally well, reporting a 0.952 test accuracy. It correctly classified many of the mistakes QDA or other models made. We believe that Random Forest will perform outstandingly on the future data without expert labels since it will be less likely to overfit the data and more likely to balance the bias and variance.
 
 \end{enumerate}
+\section{Acknowledgement}
+Both members had equal contribution to the project (met up to work on the project).\\
+Resources: 
+\begin{enumerate}
+\item https://www.r-bloggers.com/how-to-implement-random-forests-in-r/
+\item https://berkeleyml.github.io/static/notes/n25.pdf
+\item https://berkeleyml.github.io/static/notes/n18.pdf
+\item https://statquest.org/2018/12/17/roc-and-auc-in-r/
+\item Yuansi Chen, Raaz Dwivedi, Bin Yu provided help during Office Hours for this project
+\end{enumerate}
+Procedure: We followed the parts in order:
+\begin{enumerate}
+\item Took 1 week for data cleaning, processing, and EDA
+\item Spent 1 weeks testing different models and went to OH for opinions
+\item Spent the remainder of the time diagnosing the models and performing analysis
+\item Compiled everything into RNW file at the end using latex
+\end{enumerate}
+
+\section{Github}
+the project is hosted here: https://github.com/shreysamdani/Cloud-Data-Classification
 
 
 \end{document}

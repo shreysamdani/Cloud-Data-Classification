@@ -27,3 +27,29 @@ Exploration and modeling of cloud detection in the polar regions based on radian
  	- splitMethod: method of splitting (integer)
  		- 1: splitting by blocks
  		- 2: splitting by image
+
+## Other Comments:
+- All visuals were made using the ggplot and default libraries
+
+
+## Packages Used:
+- base
+- knitr
+- ggplot2
+- corrplot
+- dplyr
+- Matrix
+- foreach
+- glmnet
+- iterators
+- doParallel
+- lattice
+- caret
+- MASS
+- rpart
+- MLmetrics
+- reshape2
+- rpart.plot
+- pROC
+- magrittr
+- ggpubr
