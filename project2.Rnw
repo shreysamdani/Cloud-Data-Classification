@@ -560,11 +560,11 @@ ggplot(data.labeled, aes(x=x,y=y, color=predicted)) + facet_wrap(~image, nrow = 
 @
 The results suffer less from overfitting than the models specified in parts (a) and (b).\\
 This model should work well better with future data without expert labels since it will be less likely to overfit the data and more likely to balance the bias and variance. We can also see that both the test accuracies are relatively high as compared to the other methods. 
-\item Do your results in parts 4(a) and 4(b) change as you modify the
+\item Do your results in parts 4(a) and 4(b) change as you modify the\\
 way of splitting the data?\\
 Yes, the answers change based on the splitting method. the answers above were generated using splitting method 1, since it provides access to more training data points. However, even though the data is split up by blocks, there will inherently still be some dependence between the training and test/validation sets. In this regard, method 2 will model a real world situation better, since there is no dependence in pixels in separate images.  \\
 Since method 2 gives us less training points, the observed testing points will likely have a lower accuracy rate, as we saw in 3(a). Empirically, it would be better to use method 2 with multiple images, where each image is a separate fold.
-\item Write a paragraph for your conclusion.
+\item Write a paragraph for your conclusion.\\
 We have tried 5 models for this project: QDA, LDA, Logistic Regression, Decision Tree and Kernel SVM. All of the 5 models did quite well on the CV accuracy using splitting method 1, with Kernel SVM as the highest; QDA stands out and reported the highest CV accuracy when splitting method 2 was used. Since splitting method 2 model a more realistic world situation as there is completely no dependence in pixels in separate images, we believe this might indicate that QDA is a good model on future data. Moreover, the ROC of QDA reports the best AUC and suggests a cutoff of 0; the assumptions of QDA is also met as we discussed above. The model converges at 80\% of the training data. We believe that QDA is the best model of the five. Since QDA might have the problem of overfitting, we also tried to use a more advanced model: Random Forest. We hope to use this model to lower to variance of the prediction. It turned out this model did exceptionally well, reporting a 0.952 test accuracy. It correctly classified many of the mistakes QDA or other models made. We believe that Random Forest will perform outstandingly on the future data without expert labels since it will be less likely to overfit the data and more likely to balance the bias and variance.
 
 \end{enumerate}
