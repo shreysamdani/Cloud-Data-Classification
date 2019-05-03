@@ -463,13 +463,13 @@ We can see from the log loss table above that logisitc regression performs has a
 of your choice by showing some diagnostic plots or information related to
 convergence or parameter estimation.\\\\
 Based on the ROC plots and accuracies, most of the models had similar performance, with QDA doing marginally better (KSVM is not considered because the only metric we have to compare it is the test accuracy). QDA also has a high accuracy rate with both splitting methods. Therefore, we choose to diagnose the QDA model.
-<<fig.width=7, fig.asp=0.4>>=
+<<fig.width=8, fig.asp=0.4, out.width="87.5%">>=
 num_outputs = 20
 qda.accuracies = c()
 n = nrow(data)
 cutoffs =round(seq(1,n,length.out=num_outputs+1))
 coefs = data.frame(matrix(nrow = num_outputs,ncol = 6))
-colnames(coefs) = c("mean_0","cov_0","mean_1","cov_1","Fnorm_0","Fnorm_1")
+colnames(coefs) = c("mean_0","cov_0","mean_1","cov_1","scale_0","scale_1")
 # colnames(coefs)[colnames(coefs)=="(Intercept)"] <- "Intercept"
 for (i in 2:(num_outputs+1)) {
   partialData = data[1:cutoffs[i],]
@@ -481,9 +481,14 @@ for (i in 2:(num_outputs+1)) {
   cov1 = cov(class1)
   
   model = qda(label~., data = partialData)
-  fnorm1 = norm(model$scaling[,,1],type = 'f')
-  fnorm2 = norm(model$scaling[,,2],type = 'f')
-  coefs[i-1,] = c(mean0,cov0,mean1,cov1,fnorm1,fnorm2)
+  fnorm1 = model$scaling[,,1]
+  fnorm2 = model$scaling[,,2]
+  coeffs.vals = list(mean0,cov0,mean1,cov1,fnorm1,fnorm2)
+  for (j in 1:length(coeffs.vals)) {
+    coeffs.vals[j]=norm(coeffs.vals[[j]], type="f")
+  }
+  
+  coefs[i-1,] = unlist(coeffs.vals)
   prediction = predict(model, test.data,type='response')$class
   qda.accuracies = c(qda.accuracies, mean(prediction==trueLabels))
 }
@@ -491,11 +496,11 @@ for (i in 2:(num_outputs+1)) {
 graph1 = ggplot(coefs, aes(x=1:num_outputs/num_outputs)) + labs( x="% of training data", y="parameter value") 
 graph2 = ggplot(coefs, aes(x=1:num_outputs/num_outputs)) + labs( x="% of training data", y="parameter value")
 
-for (param in names(coefs)[1:3]) {
+for (param in names(coefs)[c(1,3,5,6)]) {
   graph1 = graph1 + geom_line(aes_string(y=param, color = shQuote(param)))
 }
 
-for (param in names(coefs)[4:6]) {
+for (param in names(coefs)[c(2,4)]) {
   graph2 = graph2 + geom_line(aes_string(y=param, color = shQuote(param)))
 }
 
@@ -503,34 +508,22 @@ library(ggpubr)
 g = ggarrange(graph1,graph2, nrow = 1,ncol=2, legend = "bottom")
 annotate_figure(g, top="Parameter convergence of QDA")
 @
+The parameters of QDA are the mean, the covariance and the scaling matrix of each class. Here we have graphed the frobenius norm of each of these parameters. Looking at Parameter Convergence Graph, each of the parameter converges to the optimal value at about 80\% of the training data. It means that it only takes about 80\% of the training data to stabilize our classifier.\\
+We also see that the covariance of each of the classes is quite different, which means that LDA would not be a feasible option.
 
-Looking at the plot of parameter value vs \% of training data, we can see that each of the parameters converge to a value at around 80\% of training data.   
 
 \begin{minipage}[t]{0.5\textwidth}
 
 <<fig.width=6,fig.asp=0.5>>=
 ggplot(data.frame(), aes(x=1:num_outputs/num_outputs,y=qda.accuracies)) + geom_line()+ labs(title = "Test Accuracy of QDA", x="% of training data", y="Test Accuracy")
 @
+
+
 \end{minipage}
 \begin{minipage}[t]{0.5\textwidth}
 \vspace{1cm}
 Looking at this plot, we can see that the model might actually be overfitting once it passes 60\% of the data. 
-\end{minipage}\\\\
-% \begin{minipage}[t]{0.5\textwidth}
-% 
-% <<fig.width=6,fig.asp=0.5>>=
-% # ggplot(data.frame(),aes(x=residuals(model.log), y=..density..))+geom_histogram()
-% @
-% \end{minipage}
-% \begin{minipage}[t]{0.5\textwidth}
-% \vspace{1cm}
-% We also look at the deviance residuals for this logistic regression model. There are not many data points that have a significant residual, which is indicative of a good fit.
-% \end{minipage}\\
-<<>>=
-# summary(model.log)$coefficients
-@
-% Finally, we look at the coefficients and their z values. We observe here that all the z values are quite low, indicating that each of these variables are important to the model.
-
+\end{minipage}\\
 \item For your best classification model(s), do you notice any patterns in the 
 misclassification errors? Again, use quantitative and visual methods of analysis. Do you notice problems in particular regions, or in
 specific ranges of feature values?
@@ -540,38 +533,49 @@ predicted = (p == factor((data.labeled$label+1)/2))
 ggplot(data.labeled, aes(x=x,y=y, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for KSVM (x,y)")
 ggplot(data.labeled, aes(x=NDAI,y=CORR, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for KSVM (NDAI,CORR)")
 
-p = round(predict(model.log, data.labeled, type="response"))
+p = predict(model.qda, data.labeled, type="response")$class
 predicted = p == (data.labeled$label+1)/2
-ggplot(data.labeled, aes(x=x,y=y, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for Logistic Regression (x,y)")
-ggplot(data.labeled, aes(x=NDAI,y=CORR, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for Logistic Regression (NDAI,CORR)")
+ggplot(data.labeled, aes(x=x,y=y, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for QDA (x,y)")
+ggplot(data.labeled, aes(x=NDAI,y=CORR, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for QDA (NDAI,CORR)")
 @
-From the accuracy graphs based on location, we can see that there are definitely clusters in both KSVM and logistic regression that are entirely misclassified (moreso in logistic regression). Looking at the specific clusters, it appears that some of the misclassifications look to be more underfitting in certain areas (left side of data2 for QDA) and overfitting in others. \\
+From the accuracy graphs based on location, we can see that there are definitely clusters in both KSVM and QDA regression that are entirely misclassified (moreso in QDA). Looking at the specific clusters, it appears that some of the misclassifications look to be more underfitting in certain areas (left side of data2 for QDA) and overfitting in others. For QDA, it seems that lower values of CORR also have more misclassifications. This again might be do to some over/underfitting of the model. \\
 
 From the accuracy graphs based on the NDAI/CORR, we can see that for the KSVM model, most of the misclassifications are are values of NDAI over 1. For logistic regression, we can also see misclassifications in higher NDAI values. The misclassifications for CORR seem to be relatively well spread our over the range of CORR.
 \item Based on parts 4(a) and 4(b), can you think of a better classifier?
 How well do you think your model will work on future data without expert 
 labels?\\\\
 Since overfitting is related to having a high variance, we can use a model that uses ensemble methods to reduce the variance. An example of such a model is a random forest. Since a random forest is an ensemble method of a decision tree, it will have the same expectation but a much lower variance (depending on the number of trees used). The results are shown below.
-<<fig.asp=1/3,fig.width=9>>=
+<<fig.asp=9/24,fig.width=9>>=
 library(randomForest)
+data.2$label= factor(data.2$label)
+
+
 model.randForest = randomForest(formula=formula,data=data)
 model.randForest.pred = predict(model.randForest, test.data)
-predicted = model.randForest.pred == factor(trueLabels)
-print(paste("TEST ACCURACY:",mean(predicted)))
+predicted = model.randForest.pred == trueLabels
+print(paste("TEST ACCURACY (Splitting Method 1):",mean(predicted)))
+
+model.randForest.2 = randomForest(formula=formula,data=data.2[,-c(1,2,12)])
+model.randForest.pred.2 = predict(model.randForest, test.data.2)
+predicted = model.randForest.pred.2 == factor((test.data.2$label+1)/2)
+print(paste("TEST ACCURACY (Splitting Method 2):",mean(predicted)))
 
 p = predict(model.randForest, data.labeled)
 predicted = (p == factor((data.labeled$label+1)/2))
-ggplot(data.labeled, aes(x=x,y=y, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for Random Forest (x,y)")
-ggplot(data.labeled, aes(x=NDAI,y=CORR, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for Random Forest (NDAI,CORR)")
+ggplot(data.labeled, aes(x=x,y=y, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for Random Forest (Method 1) (x,y)")
+
+p = predict(model.randForest.2, data.labeled)
+predicted = (p == factor((data.labeled$label+1)/2))
+ggplot(data.labeled, aes(x=x,y=y, color=predicted)) + facet_wrap(~image, nrow = 1)+geom_point() + ggtitle("Accuracy graph for Random Forest (Method 1) (x,y)")
 @
-The results suffer much less from overfitting than the models specified in parts (a) and (b).\\
-This model should work well better with future data without expert labels since it will be less likely to overfit the data and more likely to balance the bias and variance.
+The results suffer less from overfitting than the models specified in parts (a) and (b).\\
+This model should work well better with future data without expert labels since it will be less likely to overfit the data and more likely to balance the bias and variance. We can also see that both the test accuracies are relatively high as compared to the other methods. 
 \item Do your results in parts 4(a) and 4(b) change as you modify the
 way of splitting the data?\\
 Yes, the answers change based on the splitting method. the answers above were generated using splitting method 1, since it provides access to more training data points. However, even though the data is split up by blocks, there will inherently still be some dependence between the training and test/validation sets. In this regard, method 2 will model a real world situation better, since there is no dependence in pixels in separate images.  \\
 Since method 2 gives us less training points, the observed testing points will likely have a lower accuracy rate, as we saw in 3(a). Empirically, it would be better to use method 2 with multiple images, where each image is a separate fold.
 \item Write a paragraph for your conclusion.
-
+We have tried 5 models for this project: QDA, LDA, Logistic Regression, Decision Tree and Kernel SVM. All of the 5 models did quite well on the CV accuracy using splitting method 1, with Kernel SVM as the highest; QDA stands out and reported the highest CV accuracy when splitting method 2 was used. Since splitting method 2 model a more realistic world situation as there is completely no dependence in pixels in separate images, we believe this might indicate that QDA is a good model on future data. Moreover, the ROC of QDA reports the best AUC and suggests a cutoff of 0; the assumptions of QDA is also met as we discussed above. The model converges at 80\% of the training data. We believe that QDA is the best model of the five. Since QDA might have the problem of overfitting, we also tried to use a more advanced model: Random Forest. We hope to use this model to lower to variance of the prediction. It turned out this model did exceptionally well, reporting a 0.952 test accuracy. It correctly classified many of the mistakes QDA or other models made. We believe that Random Forest will perform outstandingly on the future data without expert labels since it will be less likely to overfit the data and more likely to balance the bias and variance.
 
 \end{enumerate}
 
